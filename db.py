@@ -87,8 +87,6 @@ def find_products(category=None):
     if category is not None:
         sql = f"{sql} AND c.name='{category}'"
 
-    print(sql)
-
     cursor.execute(sql)
 
     rows = cursor.fetchall()
