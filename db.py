@@ -35,9 +35,12 @@ def init_db():
 
 
 def update_product(id, product):
+
+    category_id = get_category_id(product['category'])
+
     global cursor
     cursor.execute(
-        f"UPDATE PRODUCTS SET NAME='{product['name']}', PRICE={product['price']}, CATEGORY={product[category]} WHERE id={id} RETURNING *")
+        f"UPDATE PRODUCTS SET NAME='{product['name']}', PRICE={product['price']}, CATEGORY={category_id} WHERE id={id} RETURNING *")
 
     global connection
     connection.commit()
@@ -48,19 +51,11 @@ def update_product(id, product):
 
 
 def insert_product(product):
-    global cursor
-    cursor.execute(
-        f"SELECT ID FROM CATEGORIES WHERE NAME = '{product['category']}' ")
-
-    category_id = cursor.fetchone()
-
-    if category_id is None:
-        raise Exception(f"Could not find the category: {product['category']}")
-
-    category_id = category_id[0]
+    category_id = get_category_id(product['category'])
 
     sql = f"INSERT INTO PRODUCTS (NAME, PRICE, CATEGORY) VALUES('{product['name']}', {product['price']}, {category_id}) RETURNING *"
 
+    global cursor
     cursor.execute(sql)
 
     global connection
@@ -87,8 +82,6 @@ def find_products(category=None):
     if category is not None:
         sql = f"{sql} AND c.name='{category}'"
 
-    print(sql)
-
     cursor.execute(sql)
 
     rows = cursor.fetchall()
@@ -99,14 +92,19 @@ def find_products(category=None):
 def delete_product(id):
     global cursor
     cursor.execute(f"DELETE FROM PRODUCTS WHERE id = {id}")
-    cursor.commit()
+    
+    global connection
+    connection.commit()
 
     return
 
-# helper
+# helpers
 
 
 def rows_to_json(rows):
+    if rows is None:
+        return rows
+
     lines = []
 
     if not isinstance(rows, list):
@@ -118,3 +116,17 @@ def rows_to_json(rows):
         lines.append(line)
 
     return lines
+
+
+def get_category_id(category):
+    global cursor
+    cursor.execute(
+        f"SELECT ID FROM CATEGORIES WHERE NAME = '{category}' ")
+
+    category_id = cursor.fetchone()
+
+    if category_id is None:
+        raise Exception(
+            f"Could not find the category: {category}")
+
+    return category_id[0]
