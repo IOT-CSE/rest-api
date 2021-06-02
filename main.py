@@ -1,53 +1,88 @@
 import json
-from flask import Flask, jsonify, request, Response
-from flask_sqlalchemy import SQLAlchemy
-from db import getProductById, getProducts, init_db, Product, insertProduct
-# from db import init_db, insert_product, find_products, find_product_by_id, update_product, delete_product
+import os
+
+from flask import Flask, jsonify, request
+
+from database.db import init_db
+from database.category import insertCategory
+from database.product import deleteProduct, getProducts, insertProduct, updateProduct
 
 
 app = Flask(__name__)
-init_db(app)
+app = init_db(app)
+app.app_context().push()
+
+# insert rows
+__location__ = os.path.realpath(
+    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+with open(os.path.join(__location__, "files", "categories.json")) as file:
+    categories = json.load(file)
+    for category in categories:
+        insertCategory(category)
+
+with open(os.path.join(__location__, "files", "products.json")) as file:
+    products = json.load(file)
+    for product in products:
+        insertProduct(product)
+
 
 @app.route('/products')
 def list_producst():
-    return jsonify(getProducts())
+    try:
+        products = getProducts(request.args.to_dict())
+
+        if products is None:
+            return jsonify([]), 404
+
+        return jsonify(products)
+    except Exception as e:
+        return failedResponse(e, 400)
 
 
 @app.route('/products/<int:product_id>')
 def product(product_id):
     try:
-        product = getProductById(product_id)
+        products = getProducts({"id": product_id})
 
-        if product is None:
+        if products is None:
             return jsonify(), 404
 
-        return jsonify(product)
+        return jsonify(products[0])
     except Exception as e:
-        return returnFailedOperation(e,400)
+        return failedResponse(e, 400)
 
 
 @app.route('/products', methods=['POST'])
 def insert():
     try:
-        return jsonify(insertProduct(request.json)), 201
+        product = insertProduct(request.json)
+        return jsonify(product), 201
     except Exception as e:
-        return returnFailedOperation(e,400)
+        return failedResponse(e, 400)
 
 
-# @app.route('/products/<int:product_id>', methods=['PUT'])
-# def update(product_id):
+@app.route('/products/<int:product_id>', methods=['PUT'])
+def update(product_id):
 
-#     product = request.json
-#     updated_product = update_product(product_id, product)
+    product = request.json
 
-#     return jsonify(updated_product)
+    try:
+        updatedProduct = updateProduct(product_id, product)
+
+        return jsonify(updatedProduct), 200
+    except Exception as e:
+        return failedResponse(e, 400)
 
 
-# @app.route('/products/<int:product_id>', methods=['DELETE'])
-# def delete(product_id):
-#     delete_product(product_id)
-#     return jsonify(), 204
+@app.route('/products/<int:product_id>', methods=['DELETE'])
+def delete(product_id):
+    try:
+        deleteProduct(product_id)
+        return jsonify(), 204
+    except Exception as e:
+        return failedResponse(e, 400)
 
-def returnFailedOperation(e,code):
-    return {"message":"Operation failed. " + str(e)}, code
 
+def failedResponse(e, code):
+    return {"message": "Operation failed.", "reason": str(e)}, code
