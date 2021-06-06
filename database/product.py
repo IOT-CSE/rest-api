@@ -24,7 +24,7 @@ class Product(db.Model):
         }
 
 
-def getProducts(filter=None):
+def find(filter=None):
     category = None
 
     if 'category' in filter:
@@ -40,7 +40,7 @@ def getProducts(filter=None):
     return [p.serialize for p in products]
 
 
-def insertProduct(product):
+def insert(product):
     insertedProduct = Product(**product)
     db.session.add(insertedProduct)
     db.session.commit()
@@ -48,15 +48,15 @@ def insertProduct(product):
     return insertedProduct.serialize
 
 
-def updateProduct(id, product):
+def update(id, product):
     Product.query.filter_by(id=id).update(product)
 
     db.session.commit()
 
-    return getProducts({"id": id})[0]
+    return find({"id": id})[0]
 
 
-def deleteProduct(id):
+def delete(id):
     Product.query.filter_by(id=id).delete()
 
     db.session.commit()

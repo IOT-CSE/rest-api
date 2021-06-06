@@ -13,10 +13,30 @@ class Category(db.Model):
         }
 
 
-def insertCategory(category):
+def find(filter=None):
+    categories = Category.query.filter_by(**filter)
+
+    return [c.serialize for c in categories]
+
+
+def insert(category):
 
     insertedCategory = Category(**category)
     db.session.add(insertedCategory)
     db.session.commit()
 
     return insertedCategory.serialize
+
+
+def update(id, category):
+    Category.query.filter_by(id=id).update(category)
+
+    db.session.commit()
+
+    return find({"id": id})[0]
+
+
+def delete(id):
+    Category.query.filter_by(id=id).delete()
+
+    db.session.commit()
